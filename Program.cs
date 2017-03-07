@@ -69,29 +69,37 @@ namespace ConsoleApplication
             
             List<string> visitedUrl = new List<string>();
             IDictionary<String, HttpStatusCode> visitedUrlMap = new Dictionary<String, HttpStatusCode>();
+            string outputFile = "Resources/missing-from-backup-2.txt";
+            FileStream fs = File.Create(outputFile);
+            var writer = new System.IO.StreamWriter(fs);
             using (HttpClient client = new HttpClient())
             {
                 int countVisited=0;
                 int countReached=0;
                 int countMissing=0;
-                foreach (Match match in Regex.Matches(blogContent, patternHref, RegexOptions.IgnoreCase))
+                using(writer=new System.IO.StreamWriter(fs))
                 {
-                    countVisited++;
-                    string url=match.Groups[1].Value;
-                    // Console.WriteLine($"Query {url}");
-                    if (visitedUrlMap.ContainsKey(url))
-                        continue;
-                    countReached++;
-                    using (HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult())
+                    writer.WriteLine($"[{outputFile}");
+                    foreach (Match match in Regex.Matches(blogContent, patternHref, RegexOptions.IgnoreCase))
                     {
-                        HttpStatusCode respCode = (response).StatusCode;
-                        visitedUrlMap.Add(url,respCode); 
-                        if (respCode!=HttpStatusCode.OK)
+                        countVisited++;
+                        string url=match.Groups[1].Value;
+                        // Console.WriteLine($"Query {url}");
+                        if (visitedUrlMap.ContainsKey(url))
+                            continue;
+                        countReached++;
+                        using (HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult())
                         {
-                            Console.WriteLine($"[{countMissing}] {url} {respCode}");
-                            countMissing++;
-                        }
-                    } 
+                            HttpStatusCode respCode = (response).StatusCode;
+                            visitedUrlMap.Add(url,respCode); 
+                            if (respCode!=HttpStatusCode.OK)
+                            {
+                                Console.WriteLine($"[{countMissing}] {url} {respCode}");
+                                writer.WriteLine($"[{countMissing}] {url} {respCode}");
+                                countMissing++;
+                            }
+                        } 
+                    }
                 }
                 Console.WriteLine($" visited:{countVisited} reached:{countReached} missing:{countMissing}");
             } 
