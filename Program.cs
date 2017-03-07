@@ -97,12 +97,57 @@ namespace ConsoleApplication
             } 
         }
 
+        public static IDictionary<string, string> getMissingLinksTable(string[] args)
+        {
+            IDictionary<string, string> ret = new Dictionary<string, string>();
+            string missingFilePath = "Resources/missing-from-backup.txt";
+            string[] missingFile = File.ReadAllLines(missingFilePath);
+            // [236] http://1.bp.blogspot.com/-MXPlbpmoflo/UzXYDWmJS6I/AAAAAAAABJY/1wk6gWJ_D9Y/s1600/DSC04442.JPG Forbidden
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/([a-zA-Z0-9\\-/\\._]*.jpg)";
+
+            foreach(string line in missingFile)
+            {
+                string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
+                string url = Regex.Match(line, patternUrl, RegexOptions.IgnoreCase).Groups[1].Value;
+                Console.WriteLine($"{filename} {url}");
+                if (!ret.ContainsKey(filename))
+                {
+                    ret.Add(filename,url);
+                }
+            }
+            return ret;
+        }
+        public static IDictionary<string, string> getValidLinksTable(string[] args)
+        {
+            IDictionary<string, string> ret = new Dictionary<string, string>();
+            string missingFilePath = "Resources/all-valid-links.html";
+            string[] missingFile = File.ReadAllLines(missingFilePath);
+            // <a href="https://1.bp.blogspot.com/-vvIvCVl3mUA/WLnU64cG9oI/AAAAAAABhoc/z3Vx4W47luEjLeFKnrxPX0cOX5qPDQlkwCPcB/s1600/DSC04376.JPG" imageanchor="1"><img border="0" height="150" src="https://1.bp.blogspot.com/-vvIvCVl3mUA/WLnU64cG9oI/AAAAAAABhoc/z3Vx4W47luEjLeFKnrxPX0cOX5qPDQlkwCPcB/s200/DSC04376.JPG" width="200" />            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
+            // TODO
+            
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/([a-zA-Z0-9\\-/\\._]*.jpg)";
+
+            foreach(string line in missingFile)
+            {
+                string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
+                string url = Regex.Match(line, patternUrl, RegexOptions.IgnoreCase).Groups[1].Value;
+                Console.WriteLine($"{filename} {url}");
+                if (!ret.ContainsKey(filename))
+                {
+                    ret.Add(filename,url);
+                }
+            }
+            return ret;
+        }
 
         public static void Main(string[] args)
         {
             // SearchMissingImages(args);
             // CopyFoundImages(args);
-            listImageLinksFromBlogBackup(args);
+            // listImageLinksFromBlogBackup(args);
+            getMissingLinksTable(args);
+            getValidLinksTable(args);
             
         }
     }
