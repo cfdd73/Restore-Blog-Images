@@ -114,39 +114,120 @@ namespace ConsoleApplication
             string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
             string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/([a-zA-Z0-9\\-/\\._]*.jpg)";
 
+            int i=0;
             foreach(string line in missingFile)
             {
                 string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
                 string url = Regex.Match(line, patternUrl, RegexOptions.IgnoreCase).Groups[1].Value;
-                Console.WriteLine($"{filename} {url}");
                 if (!ret.ContainsKey(filename))
                 {
+                    // Console.WriteLine($"[{i++}] {filename} {url}");
                     ret.Add(filename,url);
                 }
             }
             return ret;
         }
+
+        public static void replaceMissingLinksTable(IDictionary<string, string> validTable)
+        {
+            string blogBackupPath = "Resources/blog-03-05-2017.xml";
+            string blogContent = File.ReadAllText(blogBackupPath); 
+            string blogContentFixed = blogContent; 
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._]*.jpg)";
+            
+            int iFixCount=0;
+            int iSkipCount=0;
+            foreach (Match match in Regex.Matches(blogContent, patternUrl, RegexOptions.IgnoreCase))
+            {
+                string url=match.Groups[1].Value;
+                Match m = Regex.Match(url, patternFilename, RegexOptions.IgnoreCase);
+                string size=m.Groups[1].Value;
+                string filename=m.Groups[2].Value;
+                string validUrl;
+                if(!validTable.TryGetValue(filename,out validUrl))
+                {
+                    iSkipCount++;
+                    Console.WriteLine($"can't fix {filename}");
+                }
+                else
+                {
+                    iFixCount++;
+                    // need to fix the size
+                    string sizeInValidUrl=Regex.Match(validUrl, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
+                    string validUrlWithSize=validUrl.Replace(sizeInValidUrl,size);
+                    // Console.WriteLine($"fix {filename} {size} {validUrlWithSize}");  
+                    Console.WriteLine($"fix {url} -> {validUrlWithSize}");  
+                    blogContentFixed=blogContentFixed.Replace(url,validUrlWithSize);                  
+                }
+            }
+            Console.WriteLine($"URL fixed:{iFixCount} URL skiped:{iSkipCount}");                    
+            string blogBackupFixedPath = "Resources/blog-03-08-2017.xml";
+            File.WriteAllText(blogBackupFixedPath,blogContentFixed);
+        }
+
+        public static void replaceMissingLinksTable00(IDictionary<string, string> validTable)
+        {
+            string missingFilePath = "Resources/missing-from-backup.txt";
+            string[] missingFile = File.ReadAllLines(missingFilePath);
+            // [236] http://1.bp.blogspot.com/-MXPlbpmoflo/UzXYDWmJS6I/AAAAAAAABJY/1wk6gWJ_D9Y/s1600/DSC04442.JPG Forbidden
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._]*.jpg)";
+
+            int iFixCount=0;
+            int iSkipCount=0;
+            foreach(string line in missingFile)
+            {
+                string size=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
+                string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[2].Value;
+                string url = Regex.Match(line, patternUrl, RegexOptions.IgnoreCase).Groups[1].Value;
+                string validUrl;
+                if(!validTable.TryGetValue(filename,out validUrl))
+                {
+                    iSkipCount++;
+                    Console.WriteLine($"can't fix {filename}");
+                }
+                else
+                {
+                    iFixCount++;
+                    // need to fix the size
+                    string patternSize = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
+                    Console.WriteLine($"fix {filename} {size} {validUrl}");                    
+                }
+            }
+            Console.WriteLine($"URL fixed:{iFixCount} URL skiped:{iSkipCount}");                    
+            
+        }
+
         public static IDictionary<string, string> getValidLinksTable(string[] args)
         {
             IDictionary<string, string> ret = new Dictionary<string, string>();
-            string missingFilePath = "Resources/all-valid-links.html";
-            string[] missingFile = File.ReadAllLines(missingFilePath);
+            string validFilePath = "Resources/all-valid-links.html";
+            string validFileContent = File.ReadAllText(validFilePath);
             // <a href="https://1.bp.blogspot.com/-vvIvCVl3mUA/WLnU64cG9oI/AAAAAAABhoc/z3Vx4W47luEjLeFKnrxPX0cOX5qPDQlkwCPcB/s1600/DSC04376.JPG" imageanchor="1"><img border="0" height="150" src="https://1.bp.blogspot.com/-vvIvCVl3mUA/WLnU64cG9oI/AAAAAAABhoc/z3Vx4W47luEjLeFKnrxPX0cOX5qPDQlkwCPcB/s200/DSC04376.JPG" width="200" />            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
             // TODO
             
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]{80,150}/[a-zA-Z0-9\\-/\\._]*.jpg)";
             string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/([a-zA-Z0-9\\-/\\._]*.jpg)";
 
-            foreach(string line in missingFile)
+            int i=0;
+            foreach(Match match in Regex.Matches(validFileContent, patternUrl, RegexOptions.IgnoreCase))
             {
-                string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
-                string url = Regex.Match(line, patternUrl, RegexOptions.IgnoreCase).Groups[1].Value;
-                Console.WriteLine($"{filename} {url}");
+                string url = match.Groups[1].Value;
+                string filename=Regex.Match(url, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
                 if (!ret.ContainsKey(filename))
                 {
+                    // Console.WriteLine($"[{i++}] {filename} {url}");
                     ret.Add(filename,url);
                 }
             }
             return ret;
+        }
+
+        public static void joinMissingToValid(string[] args)
+        {
+            IDictionary<string, string> validDict = getValidLinksTable(args);
+            replaceMissingLinksTable(validDict);   
         }
 
         public static void Main(string[] args)
@@ -154,9 +235,7 @@ namespace ConsoleApplication
             // SearchMissingImages(args);
             // CopyFoundImages(args);
             // listImageLinksFromBlogBackup(args);
-            getMissingLinksTable(args);
-            getValidLinksTable(args);
-            
+            joinMissingToValid(args);
         }
     }
 }
