@@ -128,9 +128,52 @@ namespace ConsoleApplication
             return ret;
         }
 
+        public static void listAllMissingImagesFromBackup(string[] args)
+        {
+            string blogBackupPath = "Resources/blog-03-08-2017.xml";
+            string blogContent = File.ReadAllText(blogBackupPath); 
+            string blogContentFixed = blogContent; 
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:% ]*\\.[jpegpng]{3,4})";
+            int countVisited=0;
+            int countMissing=0;
+            int countReached=0;
+            string outputFile = "Resources/listAllMissingImagesFromBackup.txt";
+            FileStream fs = File.Create(outputFile);
+            var writer = new System.IO.StreamWriter(fs);
+            IDictionary<String, HttpStatusCode> visitedUrlMap = new Dictionary<String, HttpStatusCode>();
+            using (HttpClient client = new HttpClient())
+            {
+                foreach (Match match in Regex.Matches(blogContent, patternUrl, RegexOptions.IgnoreCase))
+                {
+                    string url=match.Groups[1].Value;
+                    countVisited++;
+                    if (visitedUrlMap.ContainsKey(url))
+                        continue;
+                    writer.WriteLine($"{url}");
+                    if (false)
+                    using (HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult())
+                    {
+                        HttpStatusCode respCode = (response).StatusCode;
+                        visitedUrlMap.Add(url,respCode); 
+                        if (respCode!=HttpStatusCode.OK)
+                        {
+                            Console.WriteLine($"[{countMissing}] {url} {respCode}");
+                            writer.WriteLine($"[{countMissing}] {url} {respCode}");
+                            countMissing++;
+                        }
+                        else
+                        {
+                            countReached++;
+                        }
+                    } 
+                }
+            }
+            Console.WriteLine($" visited:{countVisited} reached:{countReached} missing:{countMissing}");
+        }
+
         public static void replaceMissingLinksTable(IDictionary<string, string> validTable)
         {
-            string blogBackupPath = "Resources/blog-03-05-2017.xml";
+            string blogBackupPath = "Resources/blog-03-08-2017.xml";
             string blogContent = File.ReadAllText(blogBackupPath); 
             string blogContentFixed = blogContent; 
             string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
@@ -235,7 +278,8 @@ namespace ConsoleApplication
             // SearchMissingImages(args);
             // CopyFoundImages(args);
             // listImageLinksFromBlogBackup(args);
-            joinMissingToValid(args);
+            // joinMissingToValid(args);
+            listAllMissingImagesFromBackup(args);
         }
     }
 }
