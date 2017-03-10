@@ -150,7 +150,6 @@ namespace ConsoleApplication
                     if (visitedUrlMap.ContainsKey(url))
                         continue;
                     writer.WriteLine($"{url}");
-                    if (false)
                     using (HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult())
                     {
                         HttpStatusCode respCode = (response).StatusCode;
