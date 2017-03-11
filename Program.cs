@@ -10,9 +10,9 @@ namespace ConsoleApplication
     public class Program
     {
         
-        public IDictionary<String, FileInfo> scan(DirectoryInfo root, string[] missingImages, StreamWriter writer, IDictionary<String, FileInfo> map)
+        public IDictionary<String, FileInfo> scan(DirectoryInfo root, List<string> missingImages, StreamWriter writer, IDictionary<String, FileInfo> map)
         {
-            if (map.Count>=missingImages.Length)
+            if (map.Count>=missingImages.Count)
                 return map;
             foreach(DirectoryInfo dir in root.EnumerateDirectories())
             {
@@ -23,9 +23,10 @@ namespace ConsoleApplication
             {
                 if (file.Name.ToLower().EndsWith(".jpg") &&
                     !map.ContainsKey(file.Name) && 
-                    Array.IndexOf(missingImages, file.Name) >= 0)
+                    missingImages.Contains(file.Name))
                     {
                         map.Add(file.Name,file);
+                        Console.WriteLine($"found: {file.Name}, missing: {missingImages.Count-map.Count}");
                         writer.WriteLine(file.FullName);
                         writer.Flush();
                     }
@@ -36,12 +37,31 @@ namespace ConsoleApplication
         public static void SearchMissingImages(string[] args)
         {
             Program prog = new Program();
-            string[] missingImages = File.ReadAllLines("Resources/image-list.txt");
-            string outputFile = "Resources/images-found.txt";
-            FileStream fs = File.Create(outputFile);
-            var writer = new System.IO.StreamWriter(fs);
-            IDictionary<String, FileInfo> map = prog.scan(Directory.CreateDirectory("/Volumes/photo/sorted"), missingImages, writer, new Dictionary<String, FileInfo>());
-            Console.WriteLine($"found images:{+map.Count}/{missingImages.Length}");    
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._% ]*\\.[jpegpng]{3,4})";
+            List<string> missingImages = new List<string>();
+            foreach(String line in File.ReadAllLines("Resources/listAllMissingImagesFromBackup.txt"))
+            {
+                string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[2].Value;
+                filename = Uri.UnescapeDataString(filename);
+                // Needed, because google replace ' ' by '+' in filename.
+                filename = filename.Replace('+',' ');
+                if (String.IsNullOrEmpty(filename)) {
+                    // Console.WriteLine($"SKIP:{line}");
+                }
+                else if (!missingImages.Contains(filename)) {
+                    missingImages.Add(filename);
+                    Console.WriteLine($"ADD:{filename}");
+                }
+            }
+            Console.WriteLine($"{missingImages.Count} will be searched");
+            string outputFile = "Resources/images-found-2.txt";
+            
+            using (FileStream fs = File.Create(outputFile))
+            {
+                var writer = new System.IO.StreamWriter(fs);
+                IDictionary<String, FileInfo> map = prog.scan(Directory.CreateDirectory("/Volumes/photo/sorted"), missingImages, writer, new Dictionary<String, FileInfo>());
+                Console.WriteLine($"found images:{+map.Count}/{missingImages.Count}");    
+            }
         }
 
         public static void CopyFoundImages(string[] args)
@@ -112,9 +132,8 @@ namespace ConsoleApplication
             string[] missingFile = File.ReadAllLines(missingFilePath);
             // [236] http://1.bp.blogspot.com/-MXPlbpmoflo/UzXYDWmJS6I/AAAAAAAABJY/1wk6gWJ_D9Y/s1600/DSC04442.JPG Forbidden
             string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
-            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/([a-zA-Z0-9\\-/\\._]*.jpg)";
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._% ]*\\.[jpegpng]{3,4})";
 
-            int i=0;
             foreach(string line in missingFile)
             {
                 string filename=Regex.Match(line, patternFilename, RegexOptions.IgnoreCase).Groups[1].Value;
@@ -172,11 +191,11 @@ namespace ConsoleApplication
 
         public static void replaceMissingLinksTable(IDictionary<string, string> validTable)
         {
-            string blogBackupPath = "Resources/blog-03-08-2017.xml";
+            string blogBackupPath = "Resources/blog-03-11-2017.xml";
             string blogContent = File.ReadAllText(blogBackupPath); 
             string blogContentFixed = blogContent; 
-            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
-            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._]*.jpg)";
+            string patternUrl = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:% ]*\\.[jpegpng]{3,4})";
+            string patternFilename = "http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*/(s[0-9]{1,4})/([a-zA-Z0-9\\-/\\._% ]*\\.[jpegpng]{3,4})";
             
             int iFixCount=0;
             int iSkipCount=0;
@@ -233,7 +252,6 @@ namespace ConsoleApplication
                 {
                     iFixCount++;
                     // need to fix the size
-                    string patternSize = "(http[s]{0,1}:[a-zA-Z0-9\\-/\\._:]*.jpg)";
                     Console.WriteLine($"fix {filename} {size} {validUrl}");                    
                 }
             }
@@ -274,11 +292,11 @@ namespace ConsoleApplication
 
         public static void Main(string[] args)
         {
-            // SearchMissingImages(args);
+            SearchMissingImages(args);
             // CopyFoundImages(args);
             // listImageLinksFromBlogBackup(args);
             // joinMissingToValid(args);
-            listAllMissingImagesFromBackup(args);
+            // listAllMissingImagesFromBackup(args);
         }
     }
 }
